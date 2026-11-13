@@ -121,6 +121,18 @@ Performance may vary depending on audio quality, recording conditions and the mu
 - Support more music genres.
 - Improve audio feature extraction and prediction.
 
+## 📥 Download Trained Model
+
+The trained CNN model is hosted on Google Drive due to its file size.
+
+**Download:** [MusicMind CNN Model](https://drive.google.com/file/d/16VIDkO0XSHsVyLEIeNUoUri8dBE8cJZX/view?usp=sharing)
+
+After downloading, place the `musicmind_cnn.keras` file inside the `models/` folder.
+
+Make sure `genres.npy` is also present in the same folder.
+
+
+
 ## ⚠️ Disclaimer
 
 Predictions and confidence scores are AI-generated estimates and are not guaranteed to represent the actual music genre.
