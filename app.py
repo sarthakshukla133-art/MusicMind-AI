@@ -6,13 +6,19 @@ import librosa
 import librosa.display
 import matplotlib.pyplot as plt
 import io
+import os
+import zipfile
+import gdown
 from scipy.signal import resample
 
+
+# ---------- PAGE CONFIG ----------
 st.set_page_config(
     page_title="MusicMind AI",
     page_icon="🎵",
     layout="centered"
 )
+
 
 # ---------- CUSTOM DESIGN ----------
 st.markdown("""
@@ -99,10 +105,41 @@ footer {
 # ---------- LOAD MODEL ----------
 @st.cache_resource
 def load_model():
-    model = tf.keras.models.load_model(
-        "models/musicmind_cnn.keras"
-    )
-    genres = np.load("models/genres.npy")
+
+    os.makedirs("models", exist_ok=True)
+
+    model_path = "models/musicmind_cnn.keras"
+
+    # Download model from Google Drive if not available
+    if not os.path.exists(model_path):
+
+        with st.spinner("Downloading trained AI model..."):
+
+            gdown.download(
+                id="16VIDkO0XSHsVyLEIeNUoUri8dBE8cJZX",
+                output=model_path,
+                quiet=False
+            )
+
+    # Check model file
+    if not os.path.exists(model_path) or os.path.getsize(model_path) == 0:
+
+        raise RuntimeError(
+            "Model download failed. Please check Google Drive access."
+        )
+
+    # Validate Keras model archive
+    if not zipfile.is_zipfile(model_path):
+
+        raise RuntimeError(
+            "Downloaded model is incomplete or invalid."
+        )
+
+    # Load trained model and genre labels
+    model = tf.keras.models.load_model(model_path)
+
+    genres = np.load("genres.npy")
+
     return model, genres
 
 
@@ -111,6 +148,7 @@ model, genres = load_model()
 
 # ---------- FEATURE EXTRACTION ----------
 def extract_features(audio_bytes):
+
     y, sr = librosa.load(
         io.BytesIO(audio_bytes),
         sr=22050,
@@ -156,6 +194,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+
+# ---------- AUDIO UPLOAD ----------
 st.markdown(
     "<div class='section-title'>Upload your music</div>",
     unsafe_allow_html=True
@@ -166,7 +206,9 @@ uploaded_file = st.file_uploader(
     type=["wav", "mp3"]
 )
 
+
 if uploaded_file:
+
     audio_bytes = uploaded_file.getvalue()
 
     st.audio(audio_bytes)
@@ -174,7 +216,9 @@ if uploaded_file:
     if st.button("✨ Analyse Music"):
 
         try:
+
             with st.spinner("Listening to your music..."):
+
                 features, mel_db = extract_features(audio_bytes)
 
                 predictions = model.predict(
@@ -185,8 +229,11 @@ if uploaded_file:
                 top_indices = np.argsort(predictions)[::-1][:3]
 
                 best_index = top_indices[0]
+
                 best_genre = str(genres[best_index]).upper()
+
                 confidence = float(predictions[best_index]) * 100
+
 
             # ---------- MAIN RESULT ----------
             st.markdown(f"""
@@ -199,14 +246,17 @@ if uploaded_file:
             </div>
             """, unsafe_allow_html=True)
 
-            # ---------- TOP 3 ----------
+
+            # ---------- TOP 3 MATCHES ----------
             st.markdown(
                 "<div class='section-title'>Top Matches</div>",
                 unsafe_allow_html=True
             )
 
             for index in top_indices:
+
                 genre_name = str(genres[index]).upper()
+
                 score = float(predictions[index]) * 100
 
                 st.markdown(
@@ -217,8 +267,10 @@ if uploaded_file:
                     min(max(float(predictions[index]), 0.0), 1.0)
                 )
 
+
             # ---------- SPECTROGRAM ----------
             with st.expander("View Music Spectrogram"):
+
                 fig, ax = plt.subplots(figsize=(10, 3))
 
                 librosa.display.specshow(
@@ -231,22 +283,31 @@ if uploaded_file:
                 )
 
                 ax.set_title("Mel Spectrogram")
+
                 fig.tight_layout()
 
                 st.pyplot(fig)
+
                 plt.close(fig)
+
 
             st.caption(
                 "Predictions are AI-generated estimates, "
                 "not guaranteed genre labels."
             )
 
+
         except Exception as e:
+
             st.error(f"Something went wrong: {e}")
 
+
 else:
+
     st.info("Upload a WAV or MP3 file to get started.")
 
+
+# ---------- FOOTER ----------
 st.markdown(
     "<p style='text-align:center;color:#77718f;"
     "margin-top:50px;font-size:13px;'>"
